@@ -181,11 +181,6 @@ Since both are formatted consistently, similarity is typically **1.0** (perfect 
 
 ## Development
 
-### Running Tests
-```bash
-python -m pytest
-```
-
 ### Modifying the AI Prompt
 
 Edit the system prompt in `workflow.py` to customize how Claude interprets payloads:
@@ -210,7 +205,7 @@ response = model.invoke(f"Describe this JSON payload: {json_str}")
 
 ## License
 
-[Add your license here]
+MIT - just give me credit
 
 ## Support
 
