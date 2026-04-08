@@ -1,0 +1,5 @@
+langgraph==1.1.6
+langchain-anthropic==1.4.0
+langchain==1.2.15
+python-dotenv==1.0.1
+flask==3.0.0

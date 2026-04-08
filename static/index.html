@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payload Observer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 28px;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        header p {
+            font-size: 13px;
+            color: #999;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .left-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .right-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        textarea {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 4px;
+            color: #fff;
+            padding: 12px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 13px;
+            resize: vertical;
+            min-height: 200px;
+            transition: border-color 0.2s;
+        }
+
+        textarea::placeholder {
+            color: #555;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #444;
+        }
+
+        button {
+            background: #222;
+            color: #fff;
+            border: 1px solid #333;
+            padding: 10px 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            align-self: flex-start;
+            margin-top: 12px;
+        }
+
+        button:hover {
+            background: #333;
+            border-color: #444;
+        }
+
+        button:active {
+            background: #222;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .error {
+            background: #1a0a0a;
+            border: 1px solid #442222;
+            color: #ff6b6b;
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 12px;
+            font-size: 13px;
+        }
+
+        .metric {
+            color: #999;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .metric-value {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .formatted-output {
+            color: #666;
+            font-size: 13px;
+            margin-top: 8px;
+            padding: 12px;
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            word-break: break-all;
+            white-space: pre-wrap;
+            min-height: 200px;
+            overflow-y: auto;
+        }
+
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 20px;
+            color: #999;
+        }
+
+        .spinner {
+            border: 2px solid #333;
+            border-top: 2px solid #666;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Payload Observer</h1>
+            <p>Input any JSON payload to see AI interpretation</p>
+        </header>
+
+        <div class="main-content">
+            <div class="left-section">
+                <div class="section">
+                    <div class="section-label">Enter Payload</div>
+                    <textarea id="payload-input" placeholder='{"key": "value"}' autofocus></textarea>
+                    <div class="formatted-output" id="formatted-output"></div>
+                    <button id="analyze-btn" onclick="analyze()">Analyze</button>
+                    <div id="error-container"></div>
+                </div>
+            </div>
+
+            <div class="right-section">
+                <div class="section">
+                    <div class="section-label">Returned JSON</div>
+                    <textarea id="before-output" readonly></textarea>
+                    <div class="metric">
+                        Similarity: <span class="metric-value" id="similarity-metric">—</span>
+                        | Intersection: <span class="metric-value" id="intersection-metric">—</span>
+                        | Union: <span class="metric-value" id="union-metric">—</span>
+                    </div>
+                </div>
+                <div class="section">
+                    <div class="section-label">AI Description</div>
+                    <textarea id="after-output" readonly></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading-container" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Analyzing payload...</p>
+        </div>
+    </div>
+
+    <script>
+        async function analyze() {
+            const payloadInput = document.getElementById('payload-input').value.trim();
+            const errorContainer = document.getElementById('error-container');
+            const loadingContainer = document.getElementById('loading-container');
+            const beforeOutput = document.getElementById('before-output');
+            const afterOutput = document.getElementById('after-output');
+            const similarityMetric = document.getElementById('similarity-metric');
+            const intersectionMetric = document.getElementById('intersection-metric');
+            const unionMetric = document.getElementById('union-metric');
+            const formattedOutput = document.getElementById('formatted-output');
+            const analyzeBtn = document.getElementById('analyze-btn');
+
+            // Clear previous error
+            errorContainer.innerHTML = '';
+            beforeOutput.value = '';
+            afterOutput.value = '';
+            formattedOutput.textContent = '';
+            similarityMetric.textContent = '—';
+            intersectionMetric.textContent = '—';
+            unionMetric.textContent = '—';
+
+            if (!payloadInput) {
+                errorContainer.innerHTML = '<div class="error">Please enter a payload</div>';
+                formattedOutput.textContent = '';
+                return;
+            }
+
+            // Parse JSON
+            let payload;
+            try {
+                payload = JSON.parse(payloadInput);
+            } catch (e) {
+                errorContainer.innerHTML = `<div class="error">Invalid JSON: ${e.message}</div>`;
+                formattedOutput.textContent = '';
+                return;
+            }
+
+            // Format the payload for consistent comparison
+            const formattedInput = JSON.stringify(payload, null, 2);
+
+            // Show loading state
+            loadingContainer.style.display = 'block';
+            analyzeBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ payload, original_input: formattedInput }),
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Server error');
+                }
+
+                const result = await response.json();
+
+                // Display results
+                const formattedPayload = JSON.stringify(result.payload, null, 2);
+                formattedOutput.textContent = formattedInput;
+                beforeOutput.value = formattedPayload;
+                afterOutput.value = result.description;
+                similarityMetric.textContent = result.similarity;
+                intersectionMetric.textContent = result.intersection;
+                unionMetric.textContent = result.union;
+            } catch (error) {
+                errorContainer.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            } finally {
+                loadingContainer.style.display = 'none';
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        // Allow Enter key to submit (Ctrl+Enter or Cmd+Enter)
+        document.getElementById('payload-input').addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                analyze();
+            }
+        });
+    </script>
+</body>
+</html>
